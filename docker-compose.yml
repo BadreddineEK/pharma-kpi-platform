@@ -1,0 +1,48 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    volumes:
+      - duckdb_data:/data
+    env_file: .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - duckdb_data:/data
+    env_file: .env
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: python -m pipeline.scheduler
+    volumes:
+      - duckdb_data:/data
+      - ./data/raw:/app/data/raw
+    env_file: .env
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  duckdb_data:
+    driver: local
