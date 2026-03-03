@@ -233,6 +233,6 @@ See [DEPLOY.md](./DEPLOY.md) for step-by-step instructions to deploy on:
 
 ## 👤 Author
 
-**Badreddine EL KHAMLICHI** — Data Scientist @ Efor (mission Boehringer Ingelheim)
+**Badreddine EL KHAMLICHI** — Data Scientist 
 
 [GitHub](https://github.com/BadreddineEK) · [Portfolio](https://badreddineel.github.io/portfolioBadreddine)
