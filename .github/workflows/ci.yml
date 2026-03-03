@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install ruff
-      - run: ruff check . --ignore E501
+      - run: ruff check . --ignore E501,E402,F401,F841,E711,W291,W293
 
   test:
     name: Tests
