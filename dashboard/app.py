@@ -14,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Sidebar navigation ─────────────────────────────────────────────────────────
+# ── Sidebar ──────────────────────────────────────────────────────────────────
 st.sidebar.title("💊 Pharma KPI")
 st.sidebar.markdown("---")
 
@@ -27,7 +27,19 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("**Data window**")
 days = st.sidebar.slider("Last N days", min_value=7, max_value=365, value=30)
 
-# ── Page routing ───────────────────────────────────────────────────────────────
+st.sidebar.markdown("---")
+st.sidebar.markdown(
+    """
+    <div style='font-size:12px; color:#888;'>
+    🔗 <a href='https://github.com/BadreddineEK/pharma-kpi-platform' target='_blank'>GitHub</a>
+    &nbsp;·&nbsp;
+    Built by <a href='https://github.com/BadreddineEK' target='_blank'>Badreddine EK</a>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# ── Page routing ─────────────────────────────────────────────────────────────
 if page == "📊 Overview":
     from dashboard.pages.overview import render
     render(days=days)
