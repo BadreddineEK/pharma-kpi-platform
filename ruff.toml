@@ -1,0 +1,12 @@
+[lint]
+select = ["E", "F"]
+ignore = ["E501", "E402", "F401"]
+exclude = [
+    "pipeline/",
+    "api/",
+    "ml/",
+    "alerts/",
+    "dashboard/",
+    ".venv/",
+    "__pycache__/",
+]
