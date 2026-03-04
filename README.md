@@ -1,238 +1,197 @@
 # 💊 Pharma KPI Platform
 
-> End-to-end data platform for pharmaceutical KPI monitoring — ETL pipeline, columnar storage, REST API, interactive dashboards and ML forecasting.
+> Real-time manufacturing KPI monitoring dashboard for a multi-site pharmaceutical
+> network — built as a portfolio project to demonstrate end-to-end data science and
+> engineering skills in a regulated-industry context.
 
-[![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110-green?logo=fastapi)](https://fastapi.tiangolo.com)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.32-red?logo=streamlit)](https://streamlit.io)
-[![DuckDB](https://img.shields.io/badge/DuckDB-0.10-yellow)](https://duckdb.org)
-[![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker)](https://docker.com)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://python.org)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.32+-red?logo=streamlit)](https://streamlit.io)
+[![DuckDB](https://img.shields.io/badge/DuckDB-1.4+-yellow)](https://duckdb.org)
+[![Plotly](https://img.shields.io/badge/Plotly-5.20+-purple)](https://plotly.com)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.5+-orange?logo=scikit-learn)](https://scikit-learn.org)
 [![CI](https://github.com/BadreddineEK/pharma-kpi-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/BadreddineEK/pharma-kpi-platform/actions)
 
 ---
 
-## 🎯 What is this?
+## 🎯 Problem Statement
 
-A production-grade data platform that simulates a real pharma data team's stack:
+Pharmaceutical manufacturers operate under strict GMP (Good Manufacturing Practice)
+regulations enforced by the EMA and FDA. A single batch falling below specification,
+or a cycle time drifting above the acceptable limit, can trigger a regulatory hold,
+a product recall, and millions in penalties.
 
-- **Automated ETL pipeline** — ingests and transforms KPI data (trials, sales, production)
-- **DuckDB columnar storage** — fast analytical queries, zero config
-- **FastAPI backend** — REST API serving processed KPIs
-- **Streamlit dashboard** — interactive charts, filters, KPI cards, CSV/PDF export
-- **Prophet forecasting** — automated ML forecasts on key metrics
-- **Slack/email alerting** — notifications when KPIs breach thresholds
-- **Dockerised** — one command to run everything
-- **GitHub Actions CI/CD** — lint, test, auto-deploy on push
+Quality and Data teams need a **single view** across all sites to:
+- Detect compliance drifts *before* they become regulatory events
+- Benchmark sites against one another and against corporate targets
+- Forecast future KPI behaviour to anticipate problems
+- Track and triage breach events in a structured, auditable way
 
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                   GitHub Actions CI/CD                  │
-└─────────────────────────────────────────────────────────┘
-         │ push → test → lint → deploy
-         ▼
-┌─────────────────────────────────────────────────────────┐
-│  DATA SOURCES (CSV / REST API / generated synthetic)    │
-└───────────────────────┬─────────────────────────────────┘
-                        │
-                        ▼
-┌───────────────────────────────────────┐
-│         ETL Pipeline (Python)         │
-│  extract → transform → validate       │
-│  scheduled via APScheduler            │
-└───────────────────┬───────────────────┘
-                    │
-                    ▼
-┌───────────────────────────────────────┐
-│         DuckDB (columnar DB)          │
-│  kpis.db — partitioned by date/site   │
-└───────┬───────────────────────────────┘
-        │
-   ┌────┴────┐
-   ▼         ▼
-┌──────┐  ┌──────────────────────────┐
-│ API  │  │   ML Forecasting         │
-│ Fast │  │   Prophet / ARIMA        │
-│ API  │  │   auto-retrain weekly    │
-└──┬───┘  └──────────┬───────────────┘
-   │                 │
-   └────────┬────────┘
-            ▼
-┌───────────────────────────────────────┐
-│       Streamlit Dashboard             │
-│  KPI cards │ Time series │ Forecasts  │
-│  Filters   │ Alerts      │ Export     │
-└───────────────────────────────────────┘
-```
+This platform is that tool.
 
 ---
 
-## 📁 Project Structure
+## 🛠️ Stack
+
+| Layer | Technology | Why |
+|---|---|---|
+| **Dashboard** | Streamlit 1.32+ | Rapid interactive UI — standard for internal data apps |
+| **Storage** | DuckDB 1.4+ | Columnar, zero-config, fast analytical queries on time-series data |
+| **Visualisation** | Plotly 5.20+ | Publication-quality interactive charts |
+| **ML / Forecasting** | scikit-learn 1.5+ | Lightweight OLS with seasonality — interpretable and fast |
+| **Data wrangling** | pandas 2.2+ / numpy 2.0+ | Industry standard |
+| **CI/CD** | GitHub Actions | Lint (ruff) + pytest on every push |
+| **Linting** | ruff | 10–50× faster than flake8/pylint |
+
+---
+
+## 📊 Dashboard Pages
+
+### 🏠 Overview
+Network-wide snapshot across all 4 manufacturing sites.
+- **KPI metric cards** with live compliance badges (✅ Compliant / ⚠️ At Risk / 🔴 Breaching)
+- **Site Compliance Matrix** — heatmap of compliance % per site × KPI
+- **7-day rolling avg Batch Yield** time series, per site, with regulatory floor line
+- **OOS Rate & Cycle Time** box plots — outlier detection at a glance
+- **Revenue Index** area chart with quarterly seasonality visible
+- Full CSV export
+
+### 🔬 Site Detail
+Drill into any manufacturing site across three sub-tabs:
+- **📉 Trend** — daily + 7-day rolling average for any KPI, threshold overlay, metric description
+- **📅 Breach Calendar** — stacked bars of weekly breach days per regulated KPI
+- **🕸️ Site Profile** — radar chart of normalised compliance scores for quick diagnosis
+
+### 📈 Forecast
+ML-based projection for any KPI, by site or network average:
+- Feature-engineered OLS: linear trend (`t` index) + 6 one-hot day-of-week dummies (weekly seasonality)
+- Adjustable horizon: 7 to 90 days
+- **95 % prediction interval** shaded on the chart
+- Model stats: R², RMSE, MAE, trend coefficient, residual σ
+- Full model explainability in an expandable panel — interview-ready
+
+### 🚨 Alerts
+Structured breach management view:
+- **Severity classification**: Critical (>10 % deviation beyond threshold) / Warning (≤10 %)
+- Filterable breach table (by site and severity)
+- Daily breach timeline — stacked bar by KPI
+- Breach distribution: donut by KPI, bar by site
+
+---
+
+## 📐 KPI Catalogue
+
+| KPI | Unit | Threshold | Regulatory basis |
+|---|---|---|---|
+| **Batch Yield** | % | ≥ 92 % | GMP / 21 CFR Part 211 |
+| **Cycle Time** | h | ≤ 48 h | Internal operational standard |
+| **OOS Rate** | % | ≤ 2 % | ICH Q10 — CAPA trigger |
+| **Adverse Events** | count | ≤ 5 | EMA pharmacovigilance guidelines |
+| **Revenue Index** | index | — | Financial reporting |
+| **Trials Enrolled** | count | — | Clinical operations |
+
+---
+
+## 🧪 Synthetic Data Design
+
+**1 460 daily records** (365 days × 4 sites) stored in DuckDB.
+
+Each site has distinct baselines reflecting realistic inter-site variance:
+
+| Site | Yield baseline | Cycle Time | Operational profile |
+|---|---|---|---|
+| **Lyon** | 96.0 % | 33 h | Best-in-class — the reference site |
+| **Paris** | 94.5 % | 40 h | Solid, slightly elevated OOS |
+| **Strasbourg** | 95.0 % | 37 h | Average performer |
+| **Bordeaux** | 93.5 % | 42 h | Oldest equipment — most breaches |
+
+Realism features:
+- **Site-specific σ** on every KPI
+- **Incident windows** — consecutive days of quality dips simulating real events
+  (equipment failure, raw material lot issue, operator changeover)
+- **Continuous-improvement trend** on batch yield (+0.003 %/day — CI programme)
+- **Quarterly revenue seasonality** (sine wave, 90-day period)
+- Reproducible: `np.random.seed(42)`
+
+---
+
+## 🚀 Quickstart
+
+```bash
+# 1. Clone
+git clone https://github.com/BadreddineEK/pharma-kpi-platform
+cd pharma-kpi-platform
+
+# 2. Install (Python 3.11+)
+pip install -r requirements.txt
+
+# 3. Run
+streamlit run streamlit_app.py
+# → http://localhost:8501
+```
+
+On first launch a spinner appears while 1 460 rows are seeded into DuckDB (~2 s).
+Subsequent launches are instant (Streamlit cache_resource).
+
+**Optional — persistent local DB:**
+```bash
+# Linux / macOS
+export DUCKDB_PATH=data/kpis.db
+
+# Windows PowerShell
+$env:DUCKDB_PATH = "data/kpis.db"
+```
+
+---
+
+## 🔬 Tests & CI
+
+```bash
+pytest tests/ -v
+```
+
+GitHub Actions runs on every push to `main`:
+1. `ruff check app/ tests/` — linting (PEP 8 + style)
+2. `pytest tests/` — unit tests (seed correctness, pipeline stubs, API stubs)
+
+---
+
+## 📁 Repository Structure
 
 ```
 pharma-kpi-platform/
-├── pipeline/
-│   ├── extract.py          # Data ingestion (CSV, API, synthetic)
-│   ├── transform.py        # Cleaning, normalization, KPI computation
-│   ├── load.py             # Insert into DuckDB
-│   ├── scheduler.py        # APScheduler — runs pipeline every hour
-│   └── validate.py         # Great Expectations / pandera schema checks
-├── api/
-│   ├── main.py             # FastAPI app entry point
-│   ├── routers/
-│   │   ├── kpis.py         # GET /kpis, GET /kpis/{site}
-│   │   ├── forecasts.py    # GET /forecasts/{metric}
-│   │   └── alerts.py       # GET /alerts, POST /alerts/rules
-│   └── schemas.py          # Pydantic models
-├── ml/
-│   ├── forecaster.py       # Prophet wrapper for KPI forecasting
-│   └── retrain.py          # Weekly auto-retrain logic
-├── dashboard/
-│   ├── app.py              # Streamlit main app
-│   ├── pages/
-│   │   ├── overview.py     # Global KPI overview
-│   │   ├── site_detail.py  # Per-site drill-down
-│   │   └── forecasts.py    # Forecast visualisation page
-│   └── components/
-│       ├── kpi_card.py     # Reusable KPI card component
-│       └── chart.py        # Plotly chart factory
-├── alerts/
-│   ├── engine.py           # Threshold evaluation logic
-│   └── notifier.py         # Slack webhook + email (SMTP)
-├── data/
-│   ├── raw/                # Raw ingested files
-│   ├── processed/          # Transformed data
-│   └── kpis.db             # DuckDB database (gitignored)
+├── streamlit_app.py        ← Entry point (Streamlit Cloud + local run)
+├── app/
+│   ├── seed.py             ← Synthetic data generator → DuckDB
+│   └── dashboard.py        ← Full dashboard (4 pages, ~800 lines)
 ├── tests/
-│   ├── test_pipeline.py
-│   ├── test_api.py
-│   └── test_forecaster.py
-├── .github/
-│   └── workflows/
-│       └── ci.yml          # CI: lint + test + deploy
-├── docker-compose.yml
-├── Dockerfile.api
-├── Dockerfile.dashboard
-├── requirements.txt
-├── .env.example
-└── README.md
+│   ├── test_seed.py        ← pytest — DB seeding correctness
+│   ├── test_api.py         ← pytest — API stubs
+│   └── test_pipeline.py    ← pytest — pipeline stubs
+├── .streamlit/
+│   └── config.toml         ← Dark theme + server config
+├── requirements.txt        ← 7 runtime dependencies
+└── ruff.toml               ← Linting configuration
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🗺️ Roadmap (v2)
 
-### Option 1 — Docker (recommended)
-
-```bash
-git clone https://github.com/BadreddineEK/pharma-kpi-platform
-cd pharma-kpi-platform
-cp .env.example .env          # fill in your config
-docker-compose up --build
-```
-
-Then open:
-- **Dashboard** → http://localhost:8501
-- **API docs** → http://localhost:8000/docs
-
-### Option 2 — Local dev
-
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-
-# Run the ETL pipeline once
-python -m pipeline.scheduler --run-once
-
-# Start FastAPI
-uvicorn api.main:app --reload --port 8000
-
-# Start Streamlit (separate terminal)
-streamlit run dashboard/app.py
-```
-
----
-
-## 📊 KPIs Tracked
-
-| KPI | Description | Alert Threshold |
-|-----|-------------|----------------|
-| `batch_yield` | Production yield per batch (%) | < 92% |
-| `cycle_time` | Manufacturing cycle time (hours) | > 48h |
-| `oos_rate` | Out-of-spec rate (%) | > 2% |
-| `trials_enrolled` | Clinical trial enrollment count | < target |
-| `adverse_events` | Adverse event count per 1000 patients | > 5 |
-| `revenue_index` | Normalised revenue index | custom |
-
----
-
-## 🤖 ML Forecasting
-
-Prophet is used to forecast each KPI 30 days ahead, auto-retrained weekly:
-
-```python
-from ml.forecaster import KPIForecaster
-
-forecaster = KPIForecaster(metric="batch_yield", horizon_days=30)
-forecast_df = forecaster.run()
-```
-
-Forecasts are stored in DuckDB and served via `/forecasts/{metric}`.
-
----
-
-## 🔔 Alerting
-
-Configure thresholds in `.env` or via the API:
-
-```bash
-curl -X POST http://localhost:8000/alerts/rules \
-  -H 'Content-Type: application/json' \
-  -d '{"metric": "oos_rate", "operator": "gt", "threshold": 2.0, "channel": "slack"}'
-```
-
-Set `SLACK_WEBHOOK_URL` in `.env` to receive notifications.
-
----
-
-## 🧪 Tests
-
-```bash
-pytest tests/ -v --cov=. --cov-report=term-missing
-```
-
----
-
-## ☁️ Deployment
-
-See [DEPLOY.md](./DEPLOY.md) for step-by-step instructions to deploy on:
-- **Railway** (recommended, free tier)
-- **Render**
-- **Self-hosted VPS (Ubuntu)**
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Language | Python 3.11 |
-| Storage | DuckDB 0.10 |
-| API | FastAPI + Uvicorn |
-| Dashboard | Streamlit + Plotly |
-| ML | Prophet + pandas |
-| Scheduling | APScheduler |
-| Containerisation | Docker + docker-compose |
-| CI/CD | GitHub Actions |
-| Alerting | Slack Webhooks + SMTP |
+- [ ] **FastAPI backend** — REST endpoints serving KPIs from DuckDB
+- [ ] **Docker Compose** — one-command full-stack deployment
+- [ ] **Prophet forecasting** — seasonal decomposition with holiday effects
+- [ ] **Slack / email alerting** — webhook notifications on Critical breaches
+- [ ] **APScheduler** — automated daily data refresh pipeline
+- [ ] **KPI Comparison page** — side-by-side site benchmarking
 
 ---
 
 ## 👤 Author
 
-**Badreddine EL KHAMLICHI** — Data Scientist 
+**Badreddine EK** — Data Scientist
+[GitHub](https://github.com/BadreddineEK) ·
+[LinkedIn](https://linkedin.com/in/badreddineek)
 
-[GitHub](https://github.com/BadreddineEK) · [Portfolio](https://badreddineel.github.io/portfolioBadreddine)
+> *Built to demonstrate production-grade data engineering, KPI modelling, and ML
+> skills in a regulated-industry context — the kind of work done daily at companies
+> like Boehringer Ingelheim, Sanofi, or Pfizer.*
