@@ -1,7 +1,7 @@
 # 💊 Pharma KPI Platform
 
 > Real-time manufacturing KPI monitoring dashboard for a multi-site pharmaceutical
-> network — built as a portfolio project to demonstrate end-to-end data science and
+> network, built as a portfolio project to demonstrate end-to-end data science and
 > engineering skills in a regulated-industry context.
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://python.org)
@@ -81,17 +81,17 @@ Synthetic Generator → DuckDB (columnar store)
 ### 🏠 Overview
 Network-wide snapshot across all 4 manufacturing sites.
 - **KPI metric cards** with live compliance badges (✅ Compliant / ⚠️ At Risk / 🔴 Breaching)
-- **Site Compliance Matrix** — heatmap of compliance % per site × KPI
+- **Site Compliance Matrix** : heatmap of compliance % per site × KPI
 - **7-day rolling avg Batch Yield** time series, per site, with regulatory floor line
-- **OOS Rate & Cycle Time** box plots — outlier detection at a glance
+- **OOS Rate & Cycle Time** box plots : outlier detection at a glance
 - **Revenue Index** area chart with quarterly seasonality visible
 - Full CSV export
 
 ### 🔬 Site Detail
 Drill into any manufacturing site across three sub-tabs:
-- **📉 Trend** — daily + 7-day rolling average for any KPI, threshold overlay, metric description
-- **📅 Breach Calendar** — stacked bars of weekly breach days per regulated KPI
-- **🕸️ Site Profile** — radar chart of normalised compliance scores for quick diagnosis
+- **📉 Trend** : daily + 7-day rolling average for any KPI, threshold overlay, metric description
+- **📅 Breach Calendar** : stacked bars of weekly breach days per regulated KPI
+- **🕸️ Site Profile** : radar chart of normalised compliance scores for quick diagnosis
 
 ### 📈 Forecast
 ML-based projection for any KPI, by site or network average:
@@ -111,8 +111,8 @@ Structured breach management view:
 ### 📊 KPI Comparison *(new)*
 Side-by-side multi-site benchmarking:
 - **Grouped bar chart** comparing the latest 30-day average of any KPI across all sites
-- **Percentile ranking table** — ranks each site on each regulated KPI
-- **Site delta heatmap** — deviation of each site from the network average
+- **Percentile ranking table** : ranks each site on each regulated KPI
+- **Site delta heatmap** : deviation of each site from the network average
 - Quickly identifies which site is leading and which is lagging on each dimension
 
 ---
@@ -145,7 +145,7 @@ Each site has distinct baselines reflecting realistic inter-site variance:
 
 Realism features:
 - **Site-specific σ** on every KPI
-- **Incident windows** — consecutive days of quality dips simulating real events
+- **Incident windows** : consecutive days of quality dips simulating real events
   (equipment failure, raw material lot issue, operator changeover)
 - **Continuous-improvement trend** on batch yield (+0.003 %/day — CI programme)
 - **Quarterly revenue seasonality** (sine wave, 90-day period)
@@ -228,10 +228,9 @@ pharma-kpi-platform/
 ## 👤 Author
 
 **Badreddine EL KHAMLICHI** — Data Scientist  
-📍 Lyon, France | Efor × Boehringer Ingelheim  
 [GitHub](https://github.com/BadreddineEK) ·
 [LinkedIn](https://linkedin.com/in/badreddineek)
 
 > *Built to demonstrate production-grade data engineering, KPI modelling, and ML
-> skills in a regulated-industry context — the kind of work done daily at companies
-> like Boehringer Ingelheim, Sanofi, or Pfizer.*
+> skills in a regulated-industry context : the kind of work done daily at companies
+> like Big-Pharma*
