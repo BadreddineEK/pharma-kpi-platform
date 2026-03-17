@@ -9,8 +9,8 @@ a product recall, or financial penalties.
 
 This platform simulates the real-time KPI monitoring dashboard a Data / Quality
 Engineering team would maintain across a multi-site manufacturing network. It
-covers four core areas: network-wide overview, per-site drill-down, ML-based
-forecasting, and alert management.
+covers five core areas: network-wide overview, per-site drill-down, ML-based
+forecasting, alert management, and cross-site KPI comparison.
 """
 
 from __future__ import annotations
@@ -33,8 +33,6 @@ _default_db = str(Path(tempfile.gettempdir()) / "kpis.db")
 DUCKDB_PATH = os.environ.get("DUCKDB_PATH", _default_db)
 
 # ── KPI catalogue ─────────────────────────────────────────────────────────────
-# Each entry carries everything needed to render charts, badges, and tooltips
-# without scattering magic numbers across the codebase.
 METRICS: dict[str, dict] = {
     "batch_yield": dict(
         label="Batch Yield", unit="%", direction="lt", threshold=92.0,
@@ -83,7 +81,6 @@ METRICS: dict[str, dict] = {
     ),
 }
 
-# Consistent per-site brand colours used across every chart
 SITE_COLORS = {
     "Lyon": "#4C9BE8",
     "Paris": "#F4A261",
@@ -118,7 +115,6 @@ def load_data(days: int, site: str | None = None) -> pd.DataFrame:
 
 
 def compliance_rate(series: pd.Series, direction: str, threshold: float) -> float:
-    """Fraction of records within the regulatory threshold (0 → 1)."""
     if direction == "lt":
         return float((series >= threshold).mean())
     return float((series <= threshold).mean())
@@ -131,7 +127,6 @@ def breach_mask(series: pd.Series, direction: str, threshold: float) -> pd.Serie
 
 
 def deviation_pct(value: float, threshold: float) -> float:
-    """Percentage deviation of value from threshold."""
     return (value - threshold) / threshold * 100
 
 
@@ -170,7 +165,6 @@ def _metric_card(col, label: str, value: str, delta: str,
 
 
 def _chart_theme(fig: go.Figure, title: str = "") -> go.Figure:
-    """Apply a consistent dark-theme style to any Plotly figure."""
     fig.update_layout(
         title=dict(text=title, font=dict(size=15, color="#FAFAFA"), x=0),
         paper_bgcolor="rgba(0,0,0,0)",
@@ -203,7 +197,7 @@ def _render_sidebar() -> tuple[str, int]:
 
         page = st.radio(
             "📋 **Navigation**",
-            ["🏠 Overview", "🔬 Site Detail", "📈 Forecast", "🚨 Alerts"],
+            ["🏠 Overview", "🔬 Site Detail", "📈 Forecast", "🚨 Alerts", "📊 KPI Comparison"],
         )
 
         st.markdown("---")
@@ -235,7 +229,7 @@ trends. Stored in an in-process **DuckDB** columnar database.
 | OOS Rate | ≤ 2 % |
 | Adverse Events | ≤ 5 |
 
-**Stack** — Python 3.13 · Streamlit · DuckDB · Plotly · scikit-learn
+**Stack** — Python 3.11 · Streamlit · DuckDB · Plotly · scikit-learn
                 """
             )
 
@@ -250,7 +244,7 @@ trends. Stored in an in-process **DuckDB** columnar database.
             unsafe_allow_html=True,
         )
 
-    return page.split(" ", 1)[1], days  # strip emoji prefix
+    return page.split(" ", 1)[1], days
 
 
 # ── Page: Overview ────────────────────────────────────────────────────────────
@@ -262,7 +256,6 @@ def _page_overview(df: pd.DataFrame, days: int) -> None:
         f"— last **{days} days** · {len(df):,} records"
     )
 
-    # KPI metric cards with compliance badges
     c1, c2, c3, c4 = st.columns(4)
     _metric_card(
         c1, "Avg Batch Yield", f"{df['batch_yield'].mean():.1f} %",
@@ -286,7 +279,6 @@ def _page_overview(df: pd.DataFrame, days: int) -> None:
 
     st.markdown("---")
 
-    # --- Compliance heatmap --------------------------------------------------
     st.subheader("Site Compliance Matrix")
     st.caption("% of daily records within regulatory threshold — per site & KPI")
 
@@ -315,7 +307,6 @@ def _page_overview(df: pd.DataFrame, days: int) -> None:
     _chart_theme(fig_hm, "Compliance Rate (%) by Site & KPI")
     st.plotly_chart(fig_hm, use_container_width=True)
 
-    # --- Batch yield rolling trend -------------------------------------------
     st.subheader("Daily Trend — Batch Yield (7-day rolling avg)")
     daily = (
         df.groupby(["date", "site"])["batch_yield"]
@@ -340,7 +331,6 @@ def _page_overview(df: pd.DataFrame, days: int) -> None:
     fig_trend.update_yaxes(title_text="Batch Yield (%)")
     st.plotly_chart(fig_trend, use_container_width=True)
 
-    # --- OOS & Cycle Time distribution ---------------------------------------
     col1, col2 = st.columns(2)
     with col1:
         fig_oos = px.box(df, x="site", y="oos_rate", color="site",
@@ -361,7 +351,6 @@ def _page_overview(df: pd.DataFrame, days: int) -> None:
         fig_ct.update_yaxes(title_text="Cycle Time (h)")
         st.plotly_chart(fig_ct, use_container_width=True)
 
-    # --- Revenue index trend -------------------------------------------------
     rev = df.groupby(["date", "site"])["revenue_index"].mean().reset_index()
     fig_rev = px.area(rev, x="date", y="revenue_index", color="site",
                       color_discrete_map=SITE_COLORS, line_group="site")
@@ -371,7 +360,6 @@ def _page_overview(df: pd.DataFrame, days: int) -> None:
     fig_rev.update_yaxes(title_text="Revenue Index")
     st.plotly_chart(fig_rev, use_container_width=True)
 
-    # --- Raw data export -----------------------------------------------------
     with st.expander("📄 Raw data export"):
         st.dataframe(
             df.rename(columns={k: v["label"] for k, v in METRICS.items()})
@@ -416,7 +404,6 @@ def _page_site_detail(df: pd.DataFrame, days: int) -> None:
     st.markdown("---")
     tab1, tab2, tab3 = st.tabs(["📉 Trend", "📅 Breach Calendar", "🕸️ Site Profile"])
 
-    # --- Tab 1: metric trend -------------------------------------------------
     with tab1:
         metric_key = st.selectbox("Metric", ALL_METRIC_KEYS,
                                   format_func=lambda k: METRICS[k]["label"])
@@ -449,7 +436,6 @@ def _page_site_detail(df: pd.DataFrame, days: int) -> None:
         st.plotly_chart(fig, use_container_width=True)
         st.caption(f"ℹ️ {m['description']}")
 
-    # --- Tab 2: breach calendar ----------------------------------------------
     with tab2:
         st.markdown("Weekly count of days where a KPI exceeded its regulatory threshold.")
         dfs["week"] = dfs["date"].dt.to_period("W").apply(
@@ -479,7 +465,6 @@ def _page_site_detail(df: pd.DataFrame, days: int) -> None:
         fig_b.update_yaxes(title_text="Days in breach")
         st.plotly_chart(fig_b, use_container_width=True)
 
-    # --- Tab 3: radar compliance profile -------------------------------------
     with tab3:
         st.markdown(
             "Normalised compliance score per KPI (100 = fully compliant). "
@@ -549,7 +534,6 @@ def _page_forecast(df: pd.DataFrame, days: int) -> None:
         st.warning("Not enough data. Extend the time window to ≥ 14 days.")
         return
 
-    # Feature engineering: linear trend + weekly seasonality
     hist["t"]   = (hist["ds"] - hist["ds"].min()).dt.days
     hist["dow"] = hist["ds"].dt.dayofweek
     dow_d  = pd.get_dummies(hist["dow"], prefix="dow", dtype=int)
@@ -565,7 +549,6 @@ def _page_forecast(df: pd.DataFrame, days: int) -> None:
     mae  = float(mean_absolute_error(y_train, y_pred))
     trend_coef = float(model.coef_[0])
 
-    # Build future feature matrix
     last_t    = int(hist["t"].max())
     last_date = hist["ds"].max()
     fut_dates = pd.date_range(last_date + pd.Timedelta(days=1), periods=horizon)
@@ -616,7 +599,6 @@ def _page_forecast(df: pd.DataFrame, days: int) -> None:
         fig.update_yaxes(title_text=ylabel)
         st.plotly_chart(fig, use_container_width=True)
 
-    # Model performance metrics
     st.markdown("#### 🤖 Model Performance")
     trend_dir = (
         "↑ improving"
@@ -713,7 +695,6 @@ def _page_alerts(df: pd.DataFrame, days: int) -> None:
 
     st.markdown("---")
 
-    # Breach timeline
     tl = (
         alerts_df
         .assign(date=pd.to_datetime(alerts_df["date"]))
@@ -749,6 +730,125 @@ def _page_alerts(df: pd.DataFrame, days: int) -> None:
         st.plotly_chart(fig_k, use_container_width=True)
 
 
+# ── Page: KPI Comparison ──────────────────────────────────────────────────────
+
+def _page_kpi_comparison(df: pd.DataFrame, days: int) -> None:
+    st.title("📊 KPI Comparison")
+    st.markdown(
+        f"Side-by-side benchmarking of all sites across regulated KPIs — last **{days} days**. "
+        "Identify leaders and laggards at a glance."
+    )
+
+    # ── 1. KPI selector + grouped bar chart ──────────────────────────────────
+    metric_key = st.selectbox(
+        "Select KPI to compare",
+        REGULATED_METRICS,
+        format_func=lambda k: METRICS[k]["label"],
+    )
+    m = METRICS[metric_key]
+
+    avg_by_site = (
+        df.groupby("site")[metric_key]
+        .mean()
+        .reset_index()
+        .rename(columns={metric_key: "avg"})
+        .sort_values("avg", ascending=(m["direction"] != "lt"))
+    )
+
+    fig_bar = go.Figure()
+    for _, row in avg_by_site.iterrows():
+        site = row["site"]
+        val  = row["avg"]
+        is_breach = (
+            (m["direction"] == "lt" and val < m["threshold"]) or
+            (m["direction"] == "gt" and val > m["threshold"])
+        ) if m["direction"] else False
+        color = "#E63946" if is_breach else SITE_COLORS.get(site, "#4C9BE8")
+        fig_bar.add_trace(go.Bar(
+            x=[site], y=[val],
+            name=site,
+            marker_color=color,
+            text=[f"{val:.2f}{m['unit']}"],
+            textposition="outside",
+            hovertemplate=f"<b>{site}</b><br>{m['label']}: %{{y:.2f}}{m['unit']}<extra></extra>",
+        ))
+    if m["direction"]:
+        th_color = "#F4A261" if m["direction"] == "gt" else "#E63946"
+        th_label = f"Threshold: {m['threshold']}{m['unit']}"
+        fig_bar.add_hline(y=m["threshold"], line_dash="dot",
+                          line_color=th_color, annotation_text=th_label,
+                          annotation_position="top right")
+    _chart_theme(fig_bar, f"Average {m['label']} by site — last {days} days")
+    fig_bar.update_layout(showlegend=False, bargap=0.35)
+    fig_bar.update_yaxes(title_text=f"{m['label']} ({m['unit']})" if m["unit"] else m["label"])
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+    st.markdown("---")
+
+    # ── 2. Percentile ranking table across ALL regulated KPIs ─────────────────
+    st.subheader("🏆 Site Ranking — All Regulated KPIs")
+    st.caption(
+        "Rank 1 = best performer. Green = compliant average, Red = non-compliant average."
+    )
+
+    rank_rows = []
+    for site in sorted(df["site"].unique()):
+        row = {"Site": site}
+        dfs = df[df["site"] == site]
+        for key in REGULATED_METRICS:
+            mm  = METRICS[key]
+            avg = dfs[key].mean()
+            cr  = compliance_rate(dfs[key], mm["direction"], mm["threshold"]) * 100
+            row[mm["label"]] = f"{avg:.2f}{mm['unit']} ({cr:.0f}%)"
+        rank_rows.append(row)
+    rank_df = pd.DataFrame(rank_rows).set_index("Site")
+    st.dataframe(rank_df, use_container_width=True)
+
+    st.markdown("---")
+
+    # ── 3. Delta heatmap: deviation from network average ─────────────────────
+    st.subheader("📐 Site Delta vs Network Average")
+    st.caption(
+        "Each cell shows how much a site deviates from the network mean for that KPI. "
+        "Red = worse than average, Green = better than average."
+    )
+
+    delta_rows = []
+    net_avgs = {key: df[key].mean() for key in REGULATED_METRICS}
+    for site in sorted(df["site"].unique()):
+        row = {"Site": site}
+        dfs = df[df["site"] == site]
+        for key in REGULATED_METRICS:
+            mm  = METRICS[key]
+            site_avg = dfs[key].mean()
+            delta    = site_avg - net_avgs[key]
+            row[mm["label"]] = round(delta, 3)
+        delta_rows.append(row)
+    delta_df = pd.DataFrame(delta_rows).set_index("Site")
+
+    # For regulated KPIs: green = lower is better for cycle_time/oos_rate/adverse_events
+    # For batch_yield: green = higher is better
+    # We flip the colorscale for "lt" direction KPIs
+    fig_delta = go.Figure(go.Heatmap(
+        z=delta_df.values,
+        x=delta_df.columns.tolist(),
+        y=delta_df.index.tolist(),
+        colorscale=[[0, "#00A878"], [0.5, "rgba(255,255,255,0.05)"], [1.0, "#E63946"]],
+        text=[[f"{v:+.2f}" for v in row] for row in delta_df.values],
+        texttemplate="%{text}",
+        hovertemplate="%{y} — %{x}: %{z:+.3f}<extra></extra>",
+        colorbar=dict(title="Δ vs avg"),
+        zmid=0,
+    ))
+    _chart_theme(fig_delta, "Site deviation from network average (per KPI)")
+    st.plotly_chart(fig_delta, use_container_width=True)
+    st.caption(
+        "⚠️ Note: for Cycle Time, OOS Rate and Adverse Events, "
+        "a *negative* delta (green) means the site is performing **better** than average. "
+        "For Batch Yield, a *positive* delta (red) means better-than-average yield."
+    )
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def render() -> None:
@@ -779,3 +879,5 @@ def render() -> None:
         _page_forecast(df, days)
     elif page == "Alerts":
         _page_alerts(df, days)
+    elif page == "KPI Comparison":
+        _page_kpi_comparison(df, days)

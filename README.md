@@ -30,6 +30,38 @@ This platform is that tool.
 
 ---
 
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    PHARMA KPI PLATFORM                          │
+│                                                                 │
+│  ┌──────────┐    ┌───────────┐    ┌──────────┐    ┌─────────┐  │
+│  │  ETL     │───▶│  DuckDB   │───▶│ FastAPI  │───▶│Streamlit│  │
+│  │ Pipeline │    │ Columnar  │    │  REST    │    │Dashboard│  │
+│  │(seed.py) │    │    DB     │    │   API    │    │  (UI)   │  │
+│  └──────────┘    └─────┬─────┘    └──────────┘    └────┬────┘  │
+│                        │                               │        │
+│                  ┌─────▼─────┐                  ┌─────▼─────┐  │
+│                  │  ML Layer │                  │  Alerting │  │
+│                  │(scikit-   │                  │  Engine   │  │
+│                  │ learn OLS)│                  │(Critical/ │  │
+│                  └───────────┘                  │ Warning)  │  │
+│                                                 └───────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+
+Data Flow:
+Synthetic Generator → DuckDB (columnar store)
+                            ↓
+               SQL queries (pandas via duckdb)
+                            ↓
+        Streamlit dashboard  ←→  scikit-learn forecasting
+                            ↓
+              Plotly interactive charts  →  End user (browser)
+```
+
+---
+
 ## 🛠️ Stack
 
 | Layer | Technology | Why |
@@ -75,6 +107,13 @@ Structured breach management view:
 - Filterable breach table (by site and severity)
 - Daily breach timeline — stacked bar by KPI
 - Breach distribution: donut by KPI, bar by site
+
+### 📊 KPI Comparison *(new)*
+Side-by-side multi-site benchmarking:
+- **Grouped bar chart** comparing the latest 30-day average of any KPI across all sites
+- **Percentile ranking table** — ranks each site on each regulated KPI
+- **Site delta heatmap** — deviation of each site from the network average
+- Quickly identifies which site is leading and which is lagging on each dimension
 
 ---
 
@@ -160,9 +199,10 @@ GitHub Actions runs on every push to `main`:
 ```
 pharma-kpi-platform/
 ├── streamlit_app.py        ← Entry point (Streamlit Cloud + local run)
+├── LANDING.md              ← Product landing page with pricing
 ├── app/
 │   ├── seed.py             ← Synthetic data generator → DuckDB
-│   └── dashboard.py        ← Full dashboard (4 pages, ~800 lines)
+│   └── dashboard.py        ← Full dashboard (5 pages)
 ├── tests/
 │   ├── test_seed.py        ← pytest — DB seeding correctness
 │   ├── test_api.py         ← pytest — API stubs
@@ -182,13 +222,13 @@ pharma-kpi-platform/
 - [ ] **Prophet forecasting** — seasonal decomposition with holiday effects
 - [ ] **Slack / email alerting** — webhook notifications on Critical breaches
 - [ ] **APScheduler** — automated daily data refresh pipeline
-- [ ] **KPI Comparison page** — side-by-side site benchmarking
 
 ---
 
 ## 👤 Author
 
-**Badreddine EK** — Data Scientist
+**Badreddine EL KHAMLICHI** — Data Scientist  
+📍 Lyon, France | Efor × Boehringer Ingelheim  
 [GitHub](https://github.com/BadreddineEK) ·
 [LinkedIn](https://linkedin.com/in/badreddineek)
 
